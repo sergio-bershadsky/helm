@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/sergio-bershadsky/helm/compare/odoo-0.5.0...odoo-0.6.0) (2026-02-21)
+
+
+### Features
+
+* **odoo:** add optional backend persistence for local filestore ([39a3f3c](https://github.com/sergio-bershadsky/helm/commit/39a3f3c4f19f2e78f0b3d5c29af2287e5a3927d7))
+
 ## [0.5.0](https://github.com/sergio-bershadsky/helm/compare/odoo-0.4.0...odoo-0.5.0) (2026-02-21)
 
 
