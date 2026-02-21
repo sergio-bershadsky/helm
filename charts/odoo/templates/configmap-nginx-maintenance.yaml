@@ -1,0 +1,16 @@
+{{- if and .Values.nginx.enabled .Values.nginx.maintenancePage.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "odoo.fullname" . }}-nginx-maintenance
+  labels:
+    {{- include "odoo.labels" . | nindent 4 }}
+    app.kubernetes.io/component: nginx
+data:
+  maintenance.html: |-
+{{- if .Values.nginx.maintenancePage.content }}
+{{ .Values.nginx.maintenancePage.content | indent 4 }}
+{{- else }}
+{{ .Files.Get "files/maintenance.html" | indent 4 }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,322 @@
+global:
+  imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+## --- PostgreSQL (built-in StatefulSet)
+postgresql:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "17"
+    pullPolicy: IfNotPresent
+  auth:
+    username: odoo
+    password: ""                    # REQUIRED: pass via --set or existingSecret
+    database: postgres
+    existingSecret: ""
+    existingSecretPasswordKey: "password"
+  persistence:
+    enabled: true
+    size: 8Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  containerSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: [ALL]
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+## --- External Database (when postgresql.enabled=false)
+externalDatabase:
+  host: ""                          # REQUIRED when postgresql.enabled=false
+  port: 5432
+  user: odoo
+  database: postgres
+  password: ""                      # Inline (dev only)
+  existingSecret: ""                # K8s secret name
+  existingSecretPasswordKey: "password"  # Key within that secret
+
+## --- MinIO (built-in StatefulSet) — S3 for Odoo filestore
+minio:
+  enabled: true
+  image:
+    repository: minio/minio
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  auth:
+    rootUser: minioadmin
+    rootPassword: ""                # REQUIRED: pass via --set or existingSecret
+    existingSecret: ""
+    existingSecretRootUserKey: "root-user"
+    existingSecretRootPasswordKey: "root-password"
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+  provisioning:
+    enabled: true
+    image:
+      repository: minio/mc
+      tag: "latest"
+      pullPolicy: IfNotPresent
+    buckets:
+      - name: odoo-filestore
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  containerSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: [ALL]
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+## --- External S3 (when minio.enabled=false)
+externalS3:
+  enabled: false                    # Set true when minio.enabled=false
+  endpoint: ""                      # e.g. "https://s3.amazonaws.com"
+  bucket: "odoo-filestore"
+  region: ""
+  accessKey: ""                     # Inline (dev only)
+  secretKey: ""                     # Inline (dev only)
+  existingSecret: ""                # K8s secret name
+  existingSecretAccessKeyKey: "access-key"
+  existingSecretSecretKeyKey: "secret-key"
+
+## --- Session database
+sessionDb:
+  uri: ""                           # Full override: postgres://user:pass@host/db
+  existingSecret: ""                # K8s secret with the URI
+  existingSecretKey: "session-db-uri"
+
+## --- Backend (Odoo)
+backend:
+  replicaCount: 1
+  image:
+    repository: odoo
+    tag: "18.0"
+    pullPolicy: IfNotPresent
+  odoo:
+    logLevel: error
+    addonsPath: /mnt/extra-addons
+    proxyMode: true
+    serverWideModules: "base,web,session_db"
+  env: []                           # Additional env vars
+  service:
+    type: ClusterIP
+    ports:
+      http: 8069
+      websocket: 8072
+  startupProbe:
+    enabled: true
+    path: /web/health
+    port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30            # 5 min startup budget
+  livenessProbe:
+    enabled: true
+    path: /web/health
+    port: http
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 6
+  readinessProbe:
+    enabled: true
+    path: /web/health
+    port: http
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1536Mi
+  podSecurityContext:
+    fsGroup: 101
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 101
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: [ALL]
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  initContainers:
+    waitForDb:
+      enabled: true
+      image:
+        repository: busybox
+        tag: "1.37"
+  pdb:
+    enabled: true
+    minAvailable: 1
+  autoUpgrade:
+    enabled: false                      # Opt-in: run module upgrade on helm upgrade
+    modules: []                         # Empty = all installed modules (-u all)
+    updateModuleList: true              # Run update_list before upgrade
+    hookDeletePolicy: hook-succeeded    # hook-succeeded | hook-failed | before-hook-creation
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: "2"
+        memory: 3Gi
+    backoffLimit: 0                     # Don't retry on failure
+    activeDeadlineSeconds: 3600         # 1h timeout (safety net)
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+## --- Frontend (optional generic web frontend)
+frontend:
+  enabled: false                    # Disabled by default in generic chart
+  replicaCount: 1
+  image:
+    repository: ""
+    tag: ""
+    pullPolicy: IfNotPresent
+  command: []
+  args: []
+  env: []
+  service:
+    type: ClusterIP
+    port: 3000
+    sessionAffinity:
+      enabled: false
+      timeoutSeconds: 10800
+  startupProbe:
+    enabled: true
+    path: /
+    port: http
+    periodSeconds: 5
+    failureThreshold: 12
+  livenessProbe:
+    enabled: true
+    path: /
+    port: http
+    periodSeconds: 15
+    failureThreshold: 3
+  readinessProbe:
+    enabled: true
+    path: /
+    port: http
+    periodSeconds: 10
+    failureThreshold: 3
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  podSecurityContext:
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containerSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: [ALL]
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  pdb:
+    enabled: false
+    minAvailable: 1
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+## --- Nginx reverse proxy (optional)
+nginx:
+  enabled: false
+  image:
+    repository: nginx
+    tag: "1.27-alpine"
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 80
+  timeouts:
+    proxy_read: 720s
+    proxy_connect: 720s
+    proxy_send: 720s
+  clientMaxBodySize: 200m
+  cookieSecure: true
+  cors:
+    enabled: false
+    origins: []
+  maintenancePage:
+    enabled: false
+    content: ""                     # Inline HTML (overrides bundled file)
+  gzip:
+    enabled: true
+  domains:
+    public:
+      host: ""
+    backoffice:
+      enabled: false
+      host: ""
+  resources:
+    requests:
+      cpu: 50m
+      memory: 32Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: [ALL]
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+## --- Ingress
+ingress:
+  enabled: false                    # Disabled by default in generic chart
+  className: ""
+  annotations: {}
+  hosts: []
+  tls: []

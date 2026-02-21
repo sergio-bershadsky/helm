@@ -1,0 +1,70 @@
+Odoo has been deployed!
+
+Backend:
+  Service: {{ include "odoo.fullname" . }}-backend
+  HTTP:    port {{ .Values.backend.service.ports.http }}
+  WS:     port {{ .Values.backend.service.ports.websocket }}
+  Health:  /web/health
+
+{{- if .Values.frontend.enabled }}
+
+Frontend:
+  Service: {{ include "odoo.fullname" . }}-frontend
+  Port:    {{ .Values.frontend.service.port }}
+{{- end }}
+
+{{- if .Values.nginx.enabled }}
+
+Nginx reverse proxy:
+  Service: {{ include "odoo.nginx.serviceName" . }}
+  Port:    {{ .Values.nginx.service.port }}
+  {{- if .Values.nginx.domains.public.host }}
+  Public:     {{ .Values.nginx.domains.public.host }}
+  {{- end }}
+  {{- if and .Values.nginx.domains.backoffice.enabled .Values.nginx.domains.backoffice.host }}
+  Backoffice: {{ .Values.nginx.domains.backoffice.host }}
+  {{- end }}
+{{- end }}
+
+{{- if .Values.ingress.enabled }}
+
+Ingress:
+  {{- range .Values.ingress.hosts }}
+  Host: {{ .host }}
+  {{- end }}
+{{- end }}
+
+Database:
+  Host: {{ include "odoo.dbHost" . }}
+  Port: {{ include "odoo.dbPort" . }}
+  User: {{ include "odoo.dbUser" . }}
+  DB:   {{ include "odoo.dbName" . }}
+  {{- if .Values.postgresql.enabled }}
+  Mode: Subchart (postgresql)
+  {{- else }}
+  Mode: External
+  {{- end }}
+
+{{- if .Values.backend.autoUpgrade.enabled }}
+
+Auto-Upgrade:
+  Enabled:  true
+  Modules:  {{ include "odoo.upgradeModules" . }}
+  Update list: {{ .Values.backend.autoUpgrade.updateModuleList }}
+  Hook runs on: pre-upgrade
+  Timeout:  {{ .Values.backend.autoUpgrade.activeDeadlineSeconds }}s
+{{- end }}
+
+{{- if or .Values.minio.enabled .Values.externalS3.enabled }}
+
+S3 Storage:
+  {{- if .Values.minio.enabled }}
+  Mode:     Subchart (minio)
+  Endpoint: {{ include "odoo.s3Endpoint" . }}
+  Bucket:   odoo-filestore
+  {{- else }}
+  Mode:     External
+  Endpoint: {{ .Values.externalS3.endpoint }}
+  Bucket:   {{ .Values.externalS3.bucket }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,23 @@
+{{- if .Values.frontend.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "odoo.fullname" . }}-frontend
+  labels:
+    {{- include "odoo.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.frontend.service.type }}
+  {{- if .Values.frontend.service.sessionAffinity.enabled }}
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: {{ .Values.frontend.service.sessionAffinity.timeoutSeconds }}
+  {{- end }}
+  selector:
+    {{- include "odoo.frontend.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.frontend.service.port }}
+      targetPort: http
+      protocol: TCP
+{{- end }}

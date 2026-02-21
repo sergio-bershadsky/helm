@@ -1,0 +1,86 @@
+name: Lint and Test
+
+on:
+  pull_request:
+    paths:
+      - "charts/**"
+      - "ct.yaml"
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: azure/setup-helm@v4
+
+      - name: Helm lint
+        run: |
+          for chart in charts/*/; do
+            if [ -f "$chart/Chart.yaml" ]; then
+              helm lint "$chart"
+            fi
+          done
+
+      - name: Template — defaults
+        run: |
+          helm template test charts/odoo \
+            --set postgresql.auth.password=test \
+            --set minio.auth.rootPassword=test > /dev/null
+
+      - name: Template — external DB + S3
+        run: |
+          helm template test charts/odoo \
+            --set postgresql.enabled=false \
+            --set externalDatabase.host=ext-db \
+            --set externalDatabase.password=test \
+            --set minio.enabled=false \
+            --set externalS3.enabled=true \
+            --set externalS3.endpoint=http://s3 \
+            --set externalS3.accessKey=key \
+            --set externalS3.secretKey=secret > /dev/null
+
+      - name: Template — all existingSecrets
+        run: |
+          helm template test charts/odoo \
+            --set postgresql.enabled=false \
+            --set externalDatabase.host=ext-db \
+            --set externalDatabase.existingSecret=my-db-secret \
+            --set minio.enabled=false \
+            --set externalS3.enabled=true \
+            --set externalS3.endpoint=http://s3 \
+            --set externalS3.existingSecret=my-s3-secret \
+            --set sessionDb.existingSecret=my-session-secret > /dev/null
+
+      - name: Template — autoUpgrade all modules
+        run: |
+          helm template test charts/odoo \
+            --set postgresql.auth.password=test \
+            --set minio.auth.rootPassword=test \
+            --set backend.autoUpgrade.enabled=true \
+            --show-only templates/job-upgrade.yaml > /dev/null
+
+      - name: Template — autoUpgrade specific modules
+        run: |
+          helm template test charts/odoo \
+            --set postgresql.auth.password=test \
+            --set minio.auth.rootPassword=test \
+            --set backend.autoUpgrade.enabled=true \
+            --set 'backend.autoUpgrade.modules={sale,account,session_db}' \
+            --show-only templates/job-upgrade.yaml > /dev/null
+
+      - name: Template — autoUpgrade with existingSecrets
+        run: |
+          helm template test charts/odoo \
+            --set postgresql.enabled=false \
+            --set externalDatabase.host=ext-db \
+            --set externalDatabase.existingSecret=my-db-secret \
+            --set minio.enabled=false \
+            --set externalS3.enabled=true \
+            --set externalS3.endpoint=http://s3 \
+            --set externalS3.existingSecret=my-s3-secret \
+            --set sessionDb.existingSecret=my-session-secret \
+            --set backend.autoUpgrade.enabled=true \
+            --show-only templates/job-upgrade.yaml > /dev/null

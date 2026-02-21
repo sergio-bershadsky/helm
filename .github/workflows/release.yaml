@@ -1,0 +1,42 @@
+name: Release Charts
+
+on:
+  push:
+    tags:
+      - "*-*.*.*"   # e.g. odoo-0.2.0
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+
+      - name: Parse tag
+        id: parse
+        env:
+          GIT_TAG: ${{ github.ref_name }}
+        run: |
+          CHART="${GIT_TAG%-*.*.*}"
+          VERSION="${GIT_TAG#$CHART-}"
+          echo "chart=$CHART" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Chart: $CHART, Version: $VERSION"
+
+      - name: Login to GHCR
+        env:
+          HELM_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          HELM_USER: ${{ github.actor }}
+        run: echo "$HELM_PASSWORD" | helm registry login ghcr.io -u "$HELM_USER" --password-stdin
+
+      - name: Build and push
+        env:
+          CHART_NAME: ${{ steps.parse.outputs.chart }}
+          CHART_VERSION: ${{ steps.parse.outputs.version }}
+        run: |
+          helm package "charts/$CHART_NAME"
+          helm push "$CHART_NAME-$CHART_VERSION.tgz" oci://ghcr.io/bershadsky/charts

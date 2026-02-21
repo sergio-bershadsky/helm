@@ -1,0 +1,52 @@
+{{- if and .Values.minio.enabled .Values.minio.provisioning.enabled .Values.minio.provisioning.buckets }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-minio-provisioning
+  labels:
+    {{- include "odoo.labels" . | nindent 4 }}
+    app.kubernetes.io/component: minio-provisioning
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 120
+  template:
+    metadata:
+      labels:
+        {{- include "odoo.labels" . | nindent 8 }}
+        app.kubernetes.io/component: minio-provisioning
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      restartPolicy: OnFailure
+      containers:
+        - name: mc
+          image: "{{ .Values.minio.provisioning.image.repository }}:{{ .Values.minio.provisioning.image.tag }}"
+          imagePullPolicy: {{ .Values.minio.provisioning.image.pullPolicy }}
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "odoo.s3SecretName" . }}
+                  key: {{ include "odoo.s3SecretAccessKeyKey" . }}
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "odoo.s3SecretName" . }}
+                  key: {{ include "odoo.s3SecretSecretKeyKey" . }}
+          command:
+            - sh
+            - -c
+            - |
+              until mc alias set local {{ include "odoo.s3Endpoint" . }} "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" --api S3v4; do
+                echo "Waiting for MinIO..."
+                sleep 2
+              done
+              {{- range .Values.minio.provisioning.buckets }}
+              mc mb --ignore-existing local/{{ .name }}
+              {{- end }}
+{{- end }}

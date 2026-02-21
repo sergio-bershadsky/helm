@@ -1,0 +1,299 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "global": {
+      "type": "object",
+      "properties": {
+        "imagePullSecrets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "nameOverride": { "type": "string" },
+    "fullnameOverride": { "type": "string" },
+    "serviceAccount": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" },
+        "name": { "type": "string" },
+        "annotations": { "type": "object" }
+      }
+    },
+    "postgresql": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "image": {
+          "type": "object",
+          "properties": {
+            "repository": { "type": "string" },
+            "tag": { "type": "string" },
+            "pullPolicy": {
+              "type": "string",
+              "enum": ["Always", "IfNotPresent", "Never"]
+            }
+          }
+        },
+        "auth": {
+          "type": "object",
+          "properties": {
+            "username": { "type": "string" },
+            "password": { "type": "string" },
+            "database": { "type": "string" },
+            "existingSecret": { "type": "string" },
+            "existingSecretPasswordKey": { "type": "string" }
+          }
+        },
+        "persistence": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "size": { "type": "string" },
+            "storageClass": { "type": "string" }
+          }
+        },
+        "resources": { "type": "object" },
+        "containerSecurityContext": { "type": "object" },
+        "nodeSelector": { "type": "object" },
+        "tolerations": { "type": "array" },
+        "affinity": { "type": "object" }
+      }
+    },
+    "externalDatabase": {
+      "type": "object",
+      "properties": {
+        "host": { "type": "string" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "user": { "type": "string" },
+        "database": { "type": "string" },
+        "password": { "type": "string" },
+        "existingSecret": { "type": "string" },
+        "existingSecretPasswordKey": { "type": "string" }
+      }
+    },
+    "minio": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "image": {
+          "type": "object",
+          "properties": {
+            "repository": { "type": "string" },
+            "tag": { "type": "string" },
+            "pullPolicy": {
+              "type": "string",
+              "enum": ["Always", "IfNotPresent", "Never"]
+            }
+          }
+        },
+        "auth": {
+          "type": "object",
+          "properties": {
+            "rootUser": { "type": "string" },
+            "rootPassword": { "type": "string" },
+            "existingSecret": { "type": "string" },
+            "existingSecretRootUserKey": { "type": "string" },
+            "existingSecretRootPasswordKey": { "type": "string" }
+          }
+        },
+        "persistence": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "size": { "type": "string" },
+            "storageClass": { "type": "string" }
+          }
+        },
+        "provisioning": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "image": {
+              "type": "object",
+              "properties": {
+                "repository": { "type": "string" },
+                "tag": { "type": "string" },
+                "pullPolicy": {
+                  "type": "string",
+                  "enum": ["Always", "IfNotPresent", "Never"]
+                }
+              }
+            },
+            "buckets": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "resources": { "type": "object" },
+        "containerSecurityContext": { "type": "object" },
+        "nodeSelector": { "type": "object" },
+        "tolerations": { "type": "array" },
+        "affinity": { "type": "object" }
+      }
+    },
+    "externalS3": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "endpoint": { "type": "string" },
+        "bucket": { "type": "string" },
+        "region": { "type": "string" },
+        "accessKey": { "type": "string" },
+        "secretKey": { "type": "string" },
+        "existingSecret": { "type": "string" },
+        "existingSecretAccessKeyKey": { "type": "string" },
+        "existingSecretSecretKeyKey": { "type": "string" }
+      }
+    },
+    "sessionDb": {
+      "type": "object",
+      "properties": {
+        "uri": { "type": "string" },
+        "existingSecret": { "type": "string" },
+        "existingSecretKey": { "type": "string" }
+      }
+    },
+    "backend": {
+      "type": "object",
+      "properties": {
+        "replicaCount": { "type": "integer", "minimum": 1 },
+        "image": {
+          "type": "object",
+          "properties": {
+            "repository": { "type": "string" },
+            "tag": { "type": "string" },
+            "pullPolicy": {
+              "type": "string",
+              "enum": ["Always", "IfNotPresent", "Never"]
+            }
+          }
+        },
+        "odoo": {
+          "type": "object",
+          "properties": {
+            "logLevel": { "type": "string" },
+            "addonsPath": { "type": "string" },
+            "proxyMode": { "type": "boolean" },
+            "serverWideModules": { "type": "string" }
+          }
+        },
+        "env": { "type": "array" },
+        "service": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["ClusterIP", "NodePort", "LoadBalancer"]
+            },
+            "ports": {
+              "type": "object",
+              "properties": {
+                "http": { "type": "integer" },
+                "websocket": { "type": "integer" }
+              }
+            }
+          }
+        },
+        "resources": { "type": "object" },
+        "pdb": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "minAvailable": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "autoUpgrade": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "modules": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "updateModuleList": { "type": "boolean" },
+            "hookDeletePolicy": {
+              "type": "string",
+              "enum": ["hook-succeeded", "hook-failed", "before-hook-creation"]
+            },
+            "resources": { "type": "object" },
+            "backoffLimit": { "type": "integer", "minimum": 0 },
+            "activeDeadlineSeconds": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+    "frontend": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "replicaCount": { "type": "integer", "minimum": 1 },
+        "image": {
+          "type": "object",
+          "properties": {
+            "repository": { "type": "string" },
+            "tag": { "type": "string" },
+            "pullPolicy": {
+              "type": "string",
+              "enum": ["Always", "IfNotPresent", "Never"]
+            }
+          }
+        }
+      }
+    },
+    "nginx": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "image": {
+          "type": "object",
+          "properties": {
+            "repository": { "type": "string" },
+            "tag": { "type": "string" },
+            "pullPolicy": {
+              "type": "string",
+              "enum": ["Always", "IfNotPresent", "Never"]
+            }
+          }
+        },
+        "maintenancePage": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "content": { "type": "string" }
+          }
+        }
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "className": { "type": "string" },
+        "annotations": { "type": "object" },
+        "hosts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "host": { "type": "string" }
+            }
+          }
+        },
+        "tls": { "type": "array" }
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{{- if and .Values.frontend.enabled .Values.frontend.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "odoo.fullname" . }}-frontend
+  labels:
+    {{- include "odoo.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.frontend.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "odoo.frontend.selectorLabels" . | nindent 6 }}
+{{- end }}

@@ -1,0 +1,129 @@
+{{- if .Values.backend.autoUpgrade.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "odoo.fullname" . }}-upgrade-{{ .Release.Revision }}
+  labels:
+    {{- include "odoo.labels" . | nindent 4 }}
+    app.kubernetes.io/component: upgrade
+  annotations:
+    helm.sh/hook: pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: {{ .Values.backend.autoUpgrade.hookDeletePolicy }}
+spec:
+  backoffLimit: {{ .Values.backend.autoUpgrade.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.backend.autoUpgrade.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "odoo.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: upgrade
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "odoo.serviceAccountName" . }}
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.backend.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.backend.initContainers.waitForDb.enabled }}
+      initContainers:
+        - name: wait-for-db
+          image: "{{ .Values.backend.initContainers.waitForDb.image.repository }}:{{ .Values.backend.initContainers.waitForDb.image.tag }}"
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z {{ include "odoo.dbHost" . }} {{ include "odoo.dbPort" . }}; do
+                echo "Waiting for PostgreSQL..."
+                sleep 2
+              done
+      {{- end }}
+      containers:
+        - name: upgrade
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          {{- with .Values.backend.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          command: ["/bin/sh", "-lc"]
+          args:
+            - |
+              set -e
+              {{- if .Values.backend.autoUpgrade.updateModuleList }}
+              echo "=== Updating module list ==="
+              echo "env['ir.module.module'].update_list(); env.cr.commit()" | \
+                odoo shell \
+                  --db_host {{ include "odoo.dbHost" . }} \
+                  --db_user {{ include "odoo.dbUser" . }} \
+                  --db_password "$DB_PASSWORD" \
+                  --database {{ include "odoo.dbName" . }} \
+                  --addons-path {{ .Values.backend.odoo.addonsPath }} \
+                  --no-http
+              {{- end }}
+              echo "=== Upgrading modules: {{ include "odoo.upgradeModules" . }} ==="
+              odoo \
+                --db_host {{ include "odoo.dbHost" . }} \
+                --db_user {{ include "odoo.dbUser" . }} \
+                --db_password "$DB_PASSWORD" \
+                --database {{ include "odoo.dbName" . }} \
+                --addons-path {{ .Values.backend.odoo.addonsPath }} \
+                -u {{ include "odoo.upgradeModules" . }} \
+                --stop-after-init \
+                --no-http \
+                --workers=0
+              echo "=== Upgrade complete ==="
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "odoo.dbSecretName" . }}
+                  key: {{ include "odoo.dbSecretPasswordKey" . }}
+            - name: SESSION_DB_URI
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "odoo.sessionDbSecretName" . }}
+                  key: {{ include "odoo.sessionDbSecretKey" . }}
+            {{- if or .Values.minio.enabled .Values.externalS3.enabled }}
+            - name: AWS_ENDPOINT_URL
+              value: {{ include "odoo.s3Endpoint" . }}
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "odoo.s3SecretName" . }}
+                  key: {{ include "odoo.s3SecretAccessKeyKey" . }}
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "odoo.s3SecretName" . }}
+                  key: {{ include "odoo.s3SecretSecretKeyKey" . }}
+            {{- if .Values.externalS3.region }}
+            - name: AWS_DEFAULT_REGION
+              value: {{ .Values.externalS3.region | quote }}
+            {{- end }}
+            {{- end }}
+            {{- with .Values.backend.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.backend.autoUpgrade.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.backend.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.backend.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.backend.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

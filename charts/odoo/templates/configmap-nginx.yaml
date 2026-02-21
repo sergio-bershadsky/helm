@@ -1,0 +1,12 @@
+{{- if .Values.nginx.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "odoo.fullname" . }}-nginx
+  labels:
+    {{- include "odoo.labels" . | nindent 4 }}
+    app.kubernetes.io/component: nginx
+data:
+  nginx.conf: |
+{{- tpl (.Files.Get "files/nginx.conf.tpl") . | nindent 4 }}
+{{- end }}
