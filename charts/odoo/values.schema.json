@@ -215,6 +215,14 @@
             "minAvailable": { "type": "integer", "minimum": 0 }
           }
         },
+        "persistence": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "size": { "type": "string" },
+            "storageClass": { "type": "string" }
+          }
+        },
         "autoUpgrade": {
           "type": "object",
           "properties": {

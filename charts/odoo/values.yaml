@@ -199,6 +199,10 @@ backend:
         memory: 3Gi
     backoffLimit: 0                     # Don't retry on failure
     activeDeadlineSeconds: 3600         # 1h timeout (safety net)
+  persistence:
+    enabled: false                     # Enable for local filestore (production should use S3)
+    size: 5Gi
+    storageClass: ""
   nodeSelector: {}
   tolerations: []
   affinity: {}
