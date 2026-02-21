@@ -1,6 +1,6 @@
 # Helm Charts
 
-Personal Helm chart collection published as OCI artifacts to `ghcr.io/bershadsky/charts`.
+Personal Helm chart collection published as OCI artifacts to `ghcr.io/sergio-bershadsky/charts`.
 
 ## Charts
 
@@ -11,7 +11,7 @@ Personal Helm chart collection published as OCI artifacts to `ghcr.io/bershadsky
 ## Usage
 
 ```bash
-helm install my-release oci://ghcr.io/bershadsky/charts/odoo --version 0.2.0
+helm install my-release oci://ghcr.io/sergio-bershadsky/charts/odoo --version 0.2.0
 ```
 
 ## Development

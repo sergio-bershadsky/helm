@@ -5,9 +5,9 @@ kubeVersion: ">=1.26.0-0"
 description: Production-ready Odoo with PostgreSQL, S3, and optional frontend
 type: application
 appVersion: "18.0"
-home: https://github.com/bershadsky/helm
+home: https://github.com/sergio-bershadsky/helm
 sources:
-  - https://github.com/bershadsky/helm
+  - https://github.com/sergio-bershadsky/helm
 maintainers:
   - name: Sergey Bershadsky
     email: sergio@djangoheads.com

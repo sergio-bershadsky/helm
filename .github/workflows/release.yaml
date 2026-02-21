@@ -39,4 +39,4 @@ jobs:
           CHART_VERSION: ${{ steps.parse.outputs.version }}
         run: |
           helm package "charts/$CHART_NAME"
-          helm push "$CHART_NAME-$CHART_VERSION.tgz" oci://ghcr.io/bershadsky/charts
+          helm push "$CHART_NAME-$CHART_VERSION.tgz" oci://ghcr.io/sergio-bershadsky/charts
